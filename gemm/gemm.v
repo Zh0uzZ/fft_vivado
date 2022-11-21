@@ -96,6 +96,8 @@ module gemm #(
       for (i = 0; i < 8; i = i + 1) begin
         mantissa_reg[i] <= {(4) {1'b0}};
       end
+ output_real <= 36'b0;
+      output_imag <= 36'b0;
       sign_reg <= 8'b0;
 
     end else begin
@@ -395,7 +397,7 @@ module gemm #(
       .complement_num(adder_num[0])
   );
 
-  assign complement_sign[1] = control ? 4'b0110 : 4'b0000;
+  assign complement_sign[1] = control ? 4'b0101 : 4'b0000;
   complement #(
       .sigWidth  (sigWidth),
       .low_expand(low_expand)
@@ -417,7 +419,7 @@ module gemm #(
   );
 
 
-  assign complement_sign[3] = control ? 4'b0101 : 4'b0100;
+  assign complement_sign[3] = control ? 4'b0110 : 4'b0100;
   complement #(
       .sigWidth  (sigWidth),
       .low_expand(low_expand)
@@ -428,7 +430,7 @@ module gemm #(
   );
 
 
-  assign complement_sign[4] = control ? 4'b1111 : 4'b0000;
+  assign complement_sign[4] = control ? 4'b0000 : 4'b0000;
   complement #(
       .sigWidth  (sigWidth),
       .low_expand(low_expand)
@@ -439,7 +441,7 @@ module gemm #(
   );
 
 
-  assign complement_sign[5] = control ? 4'b1010 : 4'b0000;
+  assign complement_sign[5] = control ? 4'b1001 : 4'b0000;
   complement #(
       .sigWidth  (sigWidth),
       .low_expand(low_expand)
@@ -450,7 +452,7 @@ module gemm #(
   );
 
 
-  assign complement_sign[6] = control ? 4'b1010 : 4'b0100;
+  assign complement_sign[6] = control ? 4'b0101 : 4'b0100;
   complement #(
       .sigWidth  (sigWidth),
       .low_expand(low_expand)
@@ -461,7 +463,7 @@ module gemm #(
   );
 
 
-  assign complement_sign[7] = control ? 4'b0110 : 4'b0100;
+  assign complement_sign[7] = control ? 4'b0101 : 4'b0100;
   complement #(
       .sigWidth  (sigWidth),
       .low_expand(low_expand)

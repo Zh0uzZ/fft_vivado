@@ -1,12 +1,12 @@
 //相加之后定点数的补码转为sfp
 module fix2sfp #(
-  parameter expWidth    = 4,
-  parameter sigWidth    = 4,
-  parameter formatWidth = 9,
-  parameter fixWidth    = 21
+    parameter expWidth    = 4,
+    parameter sigWidth    = 4,
+    parameter formatWidth = 9,
+    parameter fixWidth    = 21
 ) (
-  input  [   fixWidth-1:0] fixin,
-  output [formatWidth-1:0] sfpout
+    input  [   fixWidth-1:0] fixin,
+    output [formatWidth-1:0] sfpout
 );
 
   wire [         4:0] pos;
@@ -15,12 +15,12 @@ module fix2sfp #(
   wire [fixWidth-2:0] tempfix;
 
 
-  assign tempfix = fixin[fixWidth-1] ? (~fixin[fixWidth-2:0] ) : fixin[fixWidth-2:0];
+  assign tempfix = fixin[fixWidth-1] ? (~fixin[fixWidth-2:0]) : fixin[fixWidth-2:0];
   find_one_fix #(
-    .fixWidth(fixWidth)
+      .fixWidth(fixWidth)
   ) u1_findone (
-    .input_num(tempfix),
-    .pos      (pos)
+      .input_num(tempfix),
+      .pos      (pos)
   );
   //四舍五入之前尾数数据
   always @(*) begin

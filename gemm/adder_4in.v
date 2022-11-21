@@ -45,7 +45,7 @@ module adder_4in #(
                   + manOffset[3*(sigWidth+low_expand+4)-1:2*(sigWidth+low_expand+4)] 
                   + manOffset[4*(sigWidth+4+low_expand)-1:3*(sigWidth+4+low_expand)];
 
-  assign expand_mantissa = manTemp[(sigWidth+4+low_expand)-1] ? {1'b1 , (~manTemp[(sigWidth+4+low_expand)-2:0] + 1) } : manTemp;
+  assign expand_mantissa = manTemp[(sigWidth+4+low_expand)-1] ? {1'b1 , (~manTemp[(sigWidth+4+low_expand)-2:0] + 1 ) } : manTemp;
 
   find_one #(
       .sigWidth  (sigWidth),
@@ -62,42 +62,42 @@ module adder_4in #(
       //   expOffset                = 7 - low_expand;
       // end
       4'd12: begin
-        mantissa_reg  = expand_mantissa[7] ? expand_mantissa[11:8] + 1 : expand_mantissa[11:8];
+        mantissa_reg  = expand_mantissa[7] ? expand_mantissa[11:8]         : expand_mantissa[11:8];
         // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
         expOffset_reg                = 8 - low_expand;
       end
       4'd11: begin
-        mantissa_reg  = expand_mantissa[6] ? expand_mantissa[10:7] + 1 : expand_mantissa[10:7];
+        mantissa_reg  = expand_mantissa[6] ? expand_mantissa[10:7]         : expand_mantissa[10:7];
         // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
         expOffset_reg                = 7 - low_expand;
       end
       4'd10: begin
-        mantissa_reg  = expand_mantissa[5] ? expand_mantissa[9:6] + 1 : expand_mantissa[9:6];
+        mantissa_reg  = expand_mantissa[5] ? expand_mantissa[9:6]         : expand_mantissa[9:6];
         // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
         expOffset_reg                = 6 - low_expand;
       end
       4'd9: begin
-        mantissa_reg  = expand_mantissa[4] ? expand_mantissa[8:5] + 1 : expand_mantissa[8:5];
+        mantissa_reg  = expand_mantissa[4] ? expand_mantissa[8:5]         : expand_mantissa[8:5];
         // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
         expOffset_reg                = 5 - low_expand;
       end
       4'd8: begin
-        mantissa_reg  = expand_mantissa[3] ? expand_mantissa[7:4] + 1 : expand_mantissa[7:4];
+        mantissa_reg  = expand_mantissa[3] ? expand_mantissa[7:4]         : expand_mantissa[7:4];
         // mantissa[(sigWidth-1):0] = expand_mantissa[7:4];
         expOffset_reg = 4 - low_expand;
       end
       4'd7: begin
-        mantissa_reg  = expand_mantissa[2] ? expand_mantissa[6:3] + 1 : expand_mantissa[6:3];
+        mantissa_reg  = expand_mantissa[2] ? expand_mantissa[6:3]         : expand_mantissa[6:3];
         // mantissa[(sigWidth-1):0] = expand_mantissa[6:3];
         expOffset_reg = 3 - low_expand;
       end
       4'd6: begin
-        mantissa_reg  = expand_mantissa[1] ? expand_mantissa[5:2] + 1 : expand_mantissa[5:2];
+        mantissa_reg  = expand_mantissa[1] ? expand_mantissa[5:2]         : expand_mantissa[5:2];
         // mantissa[(sigWidth-1):0] = expand_mantissa[5:2];
         expOffset_reg = 2 - low_expand;
       end
       4'd5: begin
-        mantissa_reg  = expand_mantissa[0] ? expand_mantissa[4:1] + 1 : expand_mantissa[4:1];
+        mantissa_reg  = expand_mantissa[0] ? expand_mantissa[4:1]         : expand_mantissa[4:1];
         // mantissa[(sigWidth-1):0] = expand_mantissa[4:1];
         expOffset_reg = 1 - low_expand;
       end

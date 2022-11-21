@@ -18,6 +18,9 @@ module top_control #(
     output reg fft_done
 );
 
+  localparam vector_length = 4 * formatWidth;
+
+
 
   reg                      vector_start;
   reg  [              3:0] i;
@@ -39,26 +42,26 @@ module top_control #(
 
 
   //debug signals 
-  wire [  formatWidth-1:0] wire_input_real        [3:0];
-  wire [  formatWidth-1:0] wire_input_imag        [3:0];
-  wire [  formatWidth-1:0] wire_output_real       [3:0];
-  wire [  formatWidth-1:0] wire_output_imag       [3:0];
-  wire [  formatWidth-1:0] wire_twiddle_real      [3:0];
-  wire [  formatWidth-1:0] wire_twiddle_imag      [3:0];
-  wire [  formatWidth-1:0] wire_vector_output_real[3:0];
-  wire [  formatWidth-1:0] wire_vector_output_imag[3:0];
+  wire [  formatWidth-1:0] wire_input_real        [ 3:0];
+  wire [  formatWidth-1:0] wire_input_imag        [ 3:0];
+  wire [  formatWidth-1:0] wire_output_real       [31:0];
+  wire [  formatWidth-1:0] wire_output_imag       [31:0];
+  wire [  formatWidth-1:0] wire_twiddle_real      [ 3:0];
+  wire [  formatWidth-1:0] wire_twiddle_imag      [ 3:0];
+  wire [  formatWidth-1:0] wire_vector_output_real[ 3:0];
+  wire [  formatWidth-1:0] wire_vector_output_imag[ 3:0];
 
   genvar k;
   generate
-    for (k = 0; k < 4; k = k + 1) begin
+    for (k = 0; k < 32; k = k + 1) begin
       // assign wire_input_real[k]   = input_real[formatWidth*(k+1)-1:formatWidth*k];
       // assign wire_input_imag[k]   = input_imag[formatWidth*(k+1)-1:formatWidth*k];
-      // assign wire_output_real[k]  = output_real[formatWidth*(k+1)-1:formatWidth*k];
-      // assign wire_output_imag[k]  = output_imag[formatWidth*(k+1)-1:formatWidth*k];
+      assign wire_output_real[k] = output_real[formatWidth*(k+1)-1:formatWidth*k];
+      assign wire_output_imag[k] = output_imag[formatWidth*(k+1)-1:formatWidth*k];
       // assign wire_twiddle_real[k] = twiddle_real[formatWidth*(k+1)-1:formatWidth*k];
       // assign wire_twiddle_imag[k] = twiddle_imag[formatWidth*(k+1)-1:formatWidth*k];
-      assign wire_vector_output_real[k] = vector_output_real[0][formatWidth*(k+1)-1:formatWidth*k];
-      assign wire_vector_output_imag[k] = vector_output_imag[0][formatWidth*(k+1)-1:formatWidth*k];
+      // assign wire_vector_output_real[k] = vector_output_real[0][formatWidth*(k+1)-1:formatWidth*k];
+      // assign wire_vector_output_imag[k] = vector_output_imag[0][formatWidth*(k+1)-1:formatWidth*k];
     end
   endgenerate
 
@@ -75,6 +78,9 @@ module top_control #(
       end
       vector_start <= 0;
       fft_size_reg <= 0;
+      fft_done <= 0;
+      output_real <= 0;
+      output_imag <= 0;
     end else begin
       if (fft_start) begin
         fft_size_reg <= fft_size >> 2;
@@ -429,115 +435,215 @@ module top_control #(
             };
             fft_size_reg <= fft_size_reg >> 1;
             control <= 2'b00;
+            vector_start <= 1;
 
 
           end
           default: begin
-            output_real[0] <= {
-              vector_input_real[0][formatWidth*4-1:formatWidth*3],
-              vector_input_real[2][formatWidth*4-1:formatWidth*3],
-              vector_input_real[4][formatWidth*4-1:formatWidth*3],
-              vector_input_real[6][formatWidth*4-1:formatWidth*3]
+            // output_real[vector_length*1-1:vector_length*0] <= {
+            //   vector_output_real[6][formatWidth*4-1:formatWidth*3],
+            //   vector_output_real[4][formatWidth*4-1:formatWidth*3],
+            //   vector_output_real[2][formatWidth*4-1:formatWidth*3],
+            //   vector_output_real[0][formatWidth*4-1:formatWidth*3]
+            // };
+            // output_real[vector_length*2-1:vector_length*1] <= {
+            //   vector_output_real[6][formatWidth*2-1:formatWidth*1],
+            //   vector_output_real[4][formatWidth*2-1:formatWidth*1],
+            //   vector_output_real[2][formatWidth*2-1:formatWidth*1],
+            //   vector_output_real[0][formatWidth*2-1:formatWidth*1]
+            // };
+            // output_real[vector_length*3-1:vector_length*2] <= {
+            //   vector_output_real[6][formatWidth*3-1:formatWidth*2],
+            //   vector_output_real[4][formatWidth*3-1:formatWidth*2],
+            //   vector_output_real[2][formatWidth*3-1:formatWidth*2],
+            //   vector_output_real[0][formatWidth*3-1:formatWidth*2]
+            // };
+            // output_real[vector_length*4-1:vector_length*3] <= {
+            //   vector_output_real[6][formatWidth*1-1:formatWidth*0],
+            //   vector_output_real[4][formatWidth*1-1:formatWidth*0],
+            //   vector_output_real[2][formatWidth*1-1:formatWidth*0],
+            //   vector_output_real[0][formatWidth*1-1:formatWidth*0]
+            // };
+            // output_real[vector_length*5-1:vector_length*4] <= {
+            //   vector_output_real[7][formatWidth*4-1:formatWidth*3],
+            //   vector_output_real[5][formatWidth*4-1:formatWidth*3],
+            //   vector_output_real[3][formatWidth*4-1:formatWidth*3],
+            //   vector_output_real[1][formatWidth*4-1:formatWidth*3]
+            // };
+            // output_real[vector_length*6-1:vector_length*5] <= {
+            //   vector_output_real[7][formatWidth*2-1:formatWidth*1],
+            //   vector_output_real[5][formatWidth*2-1:formatWidth*1],
+            //   vector_output_real[3][formatWidth*2-1:formatWidth*1],
+            //   vector_output_real[1][formatWidth*2-1:formatWidth*1]
+            // };
+            // output_real[vector_length*7-1:vector_length*6] <= {
+            //   vector_output_real[7][formatWidth*3-1:formatWidth*2],
+            //   vector_output_real[5][formatWidth*3-1:formatWidth*2],
+            //   vector_output_real[3][formatWidth*3-1:formatWidth*2],
+            //   vector_output_real[1][formatWidth*3-1:formatWidth*2]
+            // };
+            // output_real[vector_length*8-1:vector_length*7] <= {
+            //   vector_output_real[7][formatWidth*1-1:formatWidth*0],
+            //   vector_output_real[5][formatWidth*1-1:formatWidth*0],
+            //   vector_output_real[3][formatWidth*1-1:formatWidth*0],
+            //   vector_output_real[1][formatWidth*1-1:formatWidth*0]
+            // };
+
+
+            // output_imag[vector_length*1-1:vector_length*0] <= {
+            //   vector_output_imag[6][formatWidth*4-1:formatWidth*3],
+            //   vector_output_imag[4][formatWidth*4-1:formatWidth*3],
+            //   vector_output_imag[2][formatWidth*4-1:formatWidth*3],
+            //   vector_output_imag[0][formatWidth*4-1:formatWidth*3]
+            // };                   
+            // output_imag[vector_length*2-1:vector_length*1] <= {
+            //   vector_output_imag[6][formatWidth*2-1:formatWidth*1],
+            //   vector_output_imag[4][formatWidth*2-1:formatWidth*1],
+            //   vector_output_imag[2][formatWidth*2-1:formatWidth*1],
+            //   vector_output_imag[0][formatWidth*2-1:formatWidth*1]
+            // };                   
+            // output_imag[vector_length*3-1:vector_length*2] <= {
+            //   vector_output_imag[6][formatWidth*3-1:formatWidth*2],
+            //   vector_output_imag[4][formatWidth*3-1:formatWidth*2],
+            //   vector_output_imag[2][formatWidth*3-1:formatWidth*2],
+            //   vector_output_imag[0][formatWidth*3-1:formatWidth*2]
+            // };                   
+            // output_imag[vector_length*4-1:vector_length*3] <= {
+            //   vector_output_imag[6][formatWidth*1-1:formatWidth*0],
+            //   vector_output_imag[4][formatWidth*1-1:formatWidth*0],
+            //   vector_output_imag[2][formatWidth*1-1:formatWidth*0],
+            //   vector_output_imag[0][formatWidth*1-1:formatWidth*0]
+            // };                   
+            // output_imag[vector_length*5-1:vector_length*4] <= {
+            //   vector_output_imag[7][formatWidth*4-1:formatWidth*3],
+            //   vector_output_imag[5][formatWidth*4-1:formatWidth*3],
+            //   vector_output_imag[3][formatWidth*4-1:formatWidth*3],
+            //   vector_output_imag[1][formatWidth*4-1:formatWidth*3]
+            // };                   
+            // output_imag[vector_length*6-1:vector_length*5] <= {
+            //   vector_output_imag[7][formatWidth*2-1:formatWidth*1],
+            //   vector_output_imag[5][formatWidth*2-1:formatWidth*1],
+            //   vector_output_imag[3][formatWidth*2-1:formatWidth*1],
+            //   vector_output_imag[1][formatWidth*2-1:formatWidth*1]
+            // };                   
+            // output_imag[vector_length*7-1:vector_length*6] <= {
+            //   vector_output_imag[7][formatWidth*3-1:formatWidth*2],
+            //   vector_output_imag[5][formatWidth*3-1:formatWidth*2],
+            //   vector_output_imag[3][formatWidth*3-1:formatWidth*2],
+            //   vector_output_imag[1][formatWidth*3-1:formatWidth*2]
+            // };                   
+            // output_imag[vector_length*8-1:vector_length*7] <= {
+            //   vector_output_imag[7][formatWidth*1-1:formatWidth*0],
+            //   vector_output_imag[5][formatWidth*1-1:formatWidth*0],
+            //   vector_output_imag[3][formatWidth*1-1:formatWidth*0],
+            //   vector_output_imag[1][formatWidth*1-1:formatWidth*0]
+            // };
+            output_real[vector_length*1-1:vector_length*0] <= {
+              vector_output_real[6][formatWidth*4-1:formatWidth*3],
+              vector_output_real[4][formatWidth*4-1:formatWidth*3],
+              vector_output_real[2][formatWidth*4-1:formatWidth*3],
+              vector_output_real[0][formatWidth*4-1:formatWidth*3]
             };
-            output_real[1] <= {
-              vector_input_real[0][formatWidth*2-1:formatWidth*1],
-              vector_input_real[2][formatWidth*2-1:formatWidth*1],
-              vector_input_real[4][formatWidth*2-1:formatWidth*1],
-              vector_input_real[6][formatWidth*2-1:formatWidth*1]
+            output_real[vector_length*5-1:vector_length*4] <= {
+              vector_output_real[6][formatWidth*2-1:formatWidth*1],
+              vector_output_real[4][formatWidth*2-1:formatWidth*1],
+              vector_output_real[2][formatWidth*2-1:formatWidth*1],
+              vector_output_real[0][formatWidth*2-1:formatWidth*1]
             };
-            output_real[2] <= {
-              vector_input_real[0][formatWidth*3-1:formatWidth*2],
-              vector_input_real[2][formatWidth*3-1:formatWidth*2],
-              vector_input_real[4][formatWidth*3-1:formatWidth*2],
-              vector_input_real[6][formatWidth*3-1:formatWidth*2]
+            output_real[vector_length*2-1:vector_length*1] <= {
+              vector_output_real[6][formatWidth*3-1:formatWidth*2],
+              vector_output_real[4][formatWidth*3-1:formatWidth*2],
+              vector_output_real[2][formatWidth*3-1:formatWidth*2],
+              vector_output_real[0][formatWidth*3-1:formatWidth*2]
             };
-            output_real[3] <= {
-              vector_input_real[0][formatWidth*1-1:formatWidth*0],
-              vector_input_real[2][formatWidth*1-1:formatWidth*0],
-              vector_input_real[4][formatWidth*1-1:formatWidth*0],
-              vector_input_real[6][formatWidth*1-1:formatWidth*0]
+            output_real[vector_length*6-1:vector_length*5] <= {
+              vector_output_real[6][formatWidth*1-1:formatWidth*0],
+              vector_output_real[4][formatWidth*1-1:formatWidth*0],
+              vector_output_real[2][formatWidth*1-1:formatWidth*0],
+              vector_output_real[0][formatWidth*1-1:formatWidth*0]
             };
-            output_real[4] <= {
-              vector_input_real[1][formatWidth*4-1:formatWidth*3],
-              vector_input_real[3][formatWidth*4-1:formatWidth*3],
-              vector_input_real[5][formatWidth*4-1:formatWidth*3],
-              vector_input_real[7][formatWidth*4-1:formatWidth*3]
+            output_real[vector_length*3-1:vector_length*2] <= {
+              vector_output_real[7][formatWidth*4-1:formatWidth*3],
+              vector_output_real[5][formatWidth*4-1:formatWidth*3],
+              vector_output_real[3][formatWidth*4-1:formatWidth*3],
+              vector_output_real[1][formatWidth*4-1:formatWidth*3]
             };
-            output_real[5] <= {
-              vector_input_real[1][formatWidth*2-1:formatWidth*1],
-              vector_input_real[3][formatWidth*2-1:formatWidth*1],
-              vector_input_real[5][formatWidth*2-1:formatWidth*1],
-              vector_input_real[7][formatWidth*2-1:formatWidth*1]
+            output_real[vector_length*7-1:vector_length*6] <= {
+              vector_output_real[7][formatWidth*2-1:formatWidth*1],
+              vector_output_real[5][formatWidth*2-1:formatWidth*1],
+              vector_output_real[3][formatWidth*2-1:formatWidth*1],
+              vector_output_real[1][formatWidth*2-1:formatWidth*1]
             };
-            output_real[6] <= {
-              vector_input_real[1][formatWidth*3-1:formatWidth*2],
-              vector_input_real[3][formatWidth*3-1:formatWidth*2],
-              vector_input_real[5][formatWidth*3-1:formatWidth*2],
-              vector_input_real[7][formatWidth*3-1:formatWidth*2]
+            output_real[vector_length*4-1:vector_length*3] <= {
+              vector_output_real[7][formatWidth*3-1:formatWidth*2],
+              vector_output_real[5][formatWidth*3-1:formatWidth*2],
+              vector_output_real[3][formatWidth*3-1:formatWidth*2],
+              vector_output_real[1][formatWidth*3-1:formatWidth*2]
             };
-            output_real[7] <= {
-              vector_input_real[1][formatWidth*1-1:formatWidth*0],
-              vector_input_real[3][formatWidth*1-1:formatWidth*0],
-              vector_input_real[5][formatWidth*1-1:formatWidth*0],
-              vector_input_real[7][formatWidth*1-1:formatWidth*0]
+            output_real[vector_length*8-1:vector_length*7] <= {
+              vector_output_real[7][formatWidth*1-1:formatWidth*0],
+              vector_output_real[5][formatWidth*1-1:formatWidth*0],
+              vector_output_real[3][formatWidth*1-1:formatWidth*0],
+              vector_output_real[1][formatWidth*1-1:formatWidth*0]
             };
 
 
-            output_imag[0] <= {
-              vector_input_imag[0][formatWidth*4-1:formatWidth*3],
-              vector_input_imag[2][formatWidth*4-1:formatWidth*3],
-              vector_input_imag[4][formatWidth*4-1:formatWidth*3],
-              vector_input_imag[6][formatWidth*4-1:formatWidth*3]
+            output_imag[vector_length*1-1:vector_length*0] <= {
+              vector_output_imag[6][formatWidth*4-1:formatWidth*3],
+              vector_output_imag[4][formatWidth*4-1:formatWidth*3],
+              vector_output_imag[2][formatWidth*4-1:formatWidth*3],
+              vector_output_imag[0][formatWidth*4-1:formatWidth*3]
             };
-            output_imag[1] <= {
-              vector_input_imag[0][formatWidth*2-1:formatWidth*1],
-              vector_input_imag[2][formatWidth*2-1:formatWidth*1],
-              vector_input_imag[4][formatWidth*2-1:formatWidth*1],
-              vector_input_imag[6][formatWidth*2-1:formatWidth*1]
+            output_imag[vector_length*5-1:vector_length*4] <= {
+              vector_output_imag[6][formatWidth*2-1:formatWidth*1],
+              vector_output_imag[4][formatWidth*2-1:formatWidth*1],
+              vector_output_imag[2][formatWidth*2-1:formatWidth*1],
+              vector_output_imag[0][formatWidth*2-1:formatWidth*1]
             };
-            output_imag[2] <= {
-              vector_input_imag[0][formatWidth*3-1:formatWidth*2],
-              vector_input_imag[2][formatWidth*3-1:formatWidth*2],
-              vector_input_imag[4][formatWidth*3-1:formatWidth*2],
-              vector_input_imag[6][formatWidth*3-1:formatWidth*2]
+            output_imag[vector_length*2-1:vector_length*1] <= {
+              vector_output_imag[6][formatWidth*3-1:formatWidth*2],
+              vector_output_imag[4][formatWidth*3-1:formatWidth*2],
+              vector_output_imag[2][formatWidth*3-1:formatWidth*2],
+              vector_output_imag[0][formatWidth*3-1:formatWidth*2]
             };
-            output_imag[3] <= {
-              vector_input_imag[0][formatWidth*1-1:formatWidth*0],
-              vector_input_imag[2][formatWidth*1-1:formatWidth*0],
-              vector_input_imag[4][formatWidth*1-1:formatWidth*0],
-              vector_input_imag[6][formatWidth*1-1:formatWidth*0]
+            output_imag[vector_length*6-1:vector_length*5] <= {
+              vector_output_imag[6][formatWidth*1-1:formatWidth*0],
+              vector_output_imag[4][formatWidth*1-1:formatWidth*0],
+              vector_output_imag[2][formatWidth*1-1:formatWidth*0],
+              vector_output_imag[0][formatWidth*1-1:formatWidth*0]
             };
-            output_imag[4] <= {
-              vector_input_imag[1][formatWidth*4-1:formatWidth*3],
-              vector_input_imag[3][formatWidth*4-1:formatWidth*3],
-              vector_input_imag[5][formatWidth*4-1:formatWidth*3],
-              vector_input_imag[7][formatWidth*4-1:formatWidth*3]
+            output_imag[vector_length*3-1:vector_length*2] <= {
+              vector_output_imag[7][formatWidth*4-1:formatWidth*3],
+              vector_output_imag[5][formatWidth*4-1:formatWidth*3],
+              vector_output_imag[3][formatWidth*4-1:formatWidth*3],
+              vector_output_imag[1][formatWidth*4-1:formatWidth*3]
             };
-            output_imag[5] <= {
-              vector_input_imag[1][formatWidth*2-1:formatWidth*1],
-              vector_input_imag[3][formatWidth*2-1:formatWidth*1],
-              vector_input_imag[5][formatWidth*2-1:formatWidth*1],
-              vector_input_imag[7][formatWidth*2-1:formatWidth*1]
+            output_imag[vector_length*7-1:vector_length*6] <= {
+              vector_output_imag[7][formatWidth*2-1:formatWidth*1],
+              vector_output_imag[5][formatWidth*2-1:formatWidth*1],
+              vector_output_imag[3][formatWidth*2-1:formatWidth*1],
+              vector_output_imag[1][formatWidth*2-1:formatWidth*1]
             };
-            output_imag[6] <= {
-              vector_input_imag[1][formatWidth*3-1:formatWidth*2],
-              vector_input_imag[3][formatWidth*3-1:formatWidth*2],
-              vector_input_imag[5][formatWidth*3-1:formatWidth*2],
-              vector_input_imag[7][formatWidth*3-1:formatWidth*2]
+            output_imag[vector_length*4-1:vector_length*3] <= {
+              vector_output_imag[7][formatWidth*3-1:formatWidth*2],
+              vector_output_imag[5][formatWidth*3-1:formatWidth*2],
+              vector_output_imag[3][formatWidth*3-1:formatWidth*2],
+              vector_output_imag[1][formatWidth*3-1:formatWidth*2]
             };
-            output_imag[7] <= {
-              vector_input_imag[1][formatWidth*1-1:formatWidth*0],
-              vector_input_imag[3][formatWidth*1-1:formatWidth*0],
-              vector_input_imag[5][formatWidth*1-1:formatWidth*0],
-              vector_input_imag[7][formatWidth*1-1:formatWidth*0]
+            output_imag[vector_length*8-1:vector_length*7] <= {
+              vector_output_imag[7][formatWidth*1-1:formatWidth*0],
+              vector_output_imag[5][formatWidth*1-1:formatWidth*0],
+              vector_output_imag[3][formatWidth*1-1:formatWidth*0],
+              vector_output_imag[1][formatWidth*1-1:formatWidth*0]
             };
 
             fft_done <= 1;
           end
 
         endcase
-        vector_start <= 1;
+        // vector_start <= 1;
       end else begin
+        fft_done <= 0;
         vector_start <= 0;
       end
     end

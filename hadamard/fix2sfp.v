@@ -3,100 +3,171 @@ module fix2sfp #(
     parameter expWidth    = 4,
     parameter sigWidth    = 4,
     parameter formatWidth = 9,
-    parameter fixWidth    = 21
+    parameter low_expand  =  2
 ) (
-    input  [   fixWidth-1:0] fixin,
+    input [sigWidth + 3 + low_expand:0] fixin,
+    input [expWidth-1:0] max_exp,
     output [formatWidth-1:0] sfpout
 );
 
-  wire [         4:0] pos;
-  reg  [  expWidth:0] exponent;
-  reg  [  sigWidth:0] mantissa;
-  wire [fixWidth-2:0] tempfix;
+  wire                           zero;
+  wire [                    3:0] pos;
+  wire [sigWidth+2+low_expand:0] expand_mantissa;
+  reg  [             sigWidth:0] mantissa;
+  reg  [           sigWidth-1:0] mantissa_reg;
+  reg  [           expWidth-1:0] expOffset_reg;
+  wire [             expWidth:0] expand_exp;
 
+  assign zero = (fixin[sigWidth+2+low_expand:0] == 0);
+  assign expand_mantissa = zero | (~fixin[sigWidth+3+low_expand]) ? fixin[sigWidth+2+low_expand:0] :  ~fixin[sigWidth+2+low_expand:0]+1 ;
 
-  assign tempfix = fixin[fixWidth-1] ? (~fixin[fixWidth-2:0]) : fixin[fixWidth-2:0];
-  find_one_fix #(
-      .fixWidth(fixWidth)
+  find_one #(
+      .sigWidth  (sigWidth),
+      .low_expand(low_expand)
   ) u1_findone (
-      .input_num(tempfix),
+      .input_num(expand_mantissa),
       .pos      (pos)
   );
-  //四舍五入之前尾数数据
+
+  // //四舍五入之前尾数数据
+  // always @(*) begin
+  //   case (pos)
+  //     // 4'd11: begin
+  //     //   mantissa_reg = expand_mantissa[]
+  //     //   mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
+  //     //   expOffset                = 7 - low_expand;
+  //     // end
+  //     4'd12: begin
+  //       mantissa_reg  = expand_mantissa[7] ? expand_mantissa[11:8]         : expand_mantissa[11:8];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
+  //       expOffset_reg                = 8 - low_expand;
+  //     end
+  //     4'd11: begin
+  //       mantissa_reg  = expand_mantissa[6] ? expand_mantissa[10:7]         : expand_mantissa[10:7];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
+  //       expOffset_reg                = 7 - low_expand;
+  //     end
+  //     4'd10: begin
+  //       mantissa_reg  = expand_mantissa[5] ? expand_mantissa[9:6]         : expand_mantissa[9:6];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
+  //       expOffset_reg                = 6 - low_expand;
+  //     end
+  //     4'd9: begin
+  //       mantissa_reg  = expand_mantissa[4] ? expand_mantissa[8:5]         : expand_mantissa[8:5];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[8:5];
+  //       expOffset_reg                = 5 - low_expand;
+  //     end
+  //     4'd8: begin
+  //       mantissa_reg  = expand_mantissa[3] ? expand_mantissa[7:4]         : expand_mantissa[7:4];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[7:4];
+  //       expOffset_reg = 4 - low_expand;
+  //     end
+  //     4'd7: begin
+  //       mantissa_reg  = expand_mantissa[2] ? expand_mantissa[6:3]         : expand_mantissa[6:3];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[6:3];
+  //       expOffset_reg = 3 - low_expand;
+  //     end
+  //     4'd6: begin
+  //       mantissa_reg  = expand_mantissa[1] ? expand_mantissa[5:2]         : expand_mantissa[5:2];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[5:2];
+  //       expOffset_reg = 2 - low_expand;
+  //     end
+  //     4'd5: begin
+  //       mantissa_reg  = expand_mantissa[0] ? expand_mantissa[4:1]         : expand_mantissa[4:1];
+  //       // mantissa[(sigWidth-1):0] = expand_mantissa[4:1];
+  //       expOffset_reg = 1 - low_expand;
+  //     end
+  //     4'd4: begin
+  //       // mantissa_reg = {1'b0 , expand_mantissa[3:0]};
+  //       mantissa_reg  = expand_mantissa[3:0];
+  //       expOffset_reg = -low_expand;
+  //     end
+  //     4'd3: begin
+  //       mantissa_reg  = {expand_mantissa[2:0], 1'b0};
+  //       expOffset_reg = -1 - low_expand;
+  //     end
+  //     4'd2: begin
+  //       mantissa_reg  = {expand_mantissa[1:0], 2'b0};
+  //       expOffset_reg = -2 - low_expand;
+  //     end
+  //     4'd1: begin
+  //       mantissa_reg  = {expand_mantissa[0], 3'b0};
+  //       expOffset_reg = -3 - low_expand;
+  //     end
+  //     4'd0: begin
+  //       mantissa_reg  = {4'b0};
+  //       expOffset_reg = -4 - low_expand;
+  //     end
+  //     default: begin
+  //       mantissa_reg  = 0;
+  //       expOffset_reg = 4'b0;
+  //     end
+  //   endcase
+  // end
+  //尾数数据不经过四舍五入
   always @(*) begin
     case (pos)
-      5'd19: begin
-        mantissa = tempfix[14] ? tempfix[18:15] + 1 : tempfix[18:15];
-        exponent = 16;
+      4'd12: begin
+        mantissa_reg  = expand_mantissa[11:8];
+        expOffset_reg = 8 - low_expand;
       end
-      5'd18: begin
-        mantissa = tempfix[13] ? tempfix[17:14] + 1 : tempfix[17:14];
-        exponent = 15;
+      4'd11: begin
+        mantissa_reg  = expand_mantissa[10:7];
+        expOffset_reg = 7 - low_expand;
       end
-      5'd17: begin
-        mantissa = tempfix[12] ? tempfix[16:13] + 1 : tempfix[16:13];
-        exponent = 14;
+      4'd10: begin
+        mantissa_reg  = expand_mantissa[9:6];
+        expOffset_reg = 6 - low_expand;
       end
-      5'd16: begin
-        mantissa = tempfix[11] ? tempfix[15:12] + 1 : tempfix[15:12];
-        exponent = 13;
+      4'd9: begin
+        mantissa_reg  = expand_mantissa[8:5];
+        expOffset_reg = 5 - low_expand;
       end
-      5'd15: begin
-        mantissa = tempfix[10] ? tempfix[14:11] + 1 : tempfix[14:11];
-        exponent = 12;
+      4'd8: begin
+        mantissa_reg  = expand_mantissa[7:4];
+        expOffset_reg = 4 - low_expand;
       end
-      5'd14: begin
-        mantissa = tempfix[9] ? tempfix[13:10] + 1 : tempfix[13:10];
-        exponent = 11;
+      4'd7: begin
+        mantissa_reg  = expand_mantissa[6:3];
+        expOffset_reg = 3 - low_expand;
       end
-      5'd13: begin
-        mantissa = tempfix[8] ? tempfix[12:9] + 1 : tempfix[12:9];
-        exponent = 10;
+      4'd6: begin
+        mantissa_reg  = expand_mantissa[5:2];
+        expOffset_reg = 2 - low_expand;
       end
-      5'd12: begin
-        mantissa = tempfix[7] ? tempfix[11:8] + 1 : tempfix[11:8];
-        exponent = 9;
+      4'd5: begin
+        mantissa_reg  = expand_mantissa[4:1];
+        expOffset_reg = 1 - low_expand;
       end
-      5'd11: begin
-        mantissa = tempfix[6] ? tempfix[10:7] + 1 : tempfix[10:7];
-        exponent = 8;
+      4'd4: begin
+        mantissa_reg  = expand_mantissa[3:0];
+        expOffset_reg = -low_expand;
       end
-      5'd10: begin
-        mantissa = tempfix[5] ? tempfix[9:6] + 1 : tempfix[9:6];
-        exponent = 7;
+      4'd3: begin
+        mantissa_reg  = {expand_mantissa[2:0], 1'b0};
+        expOffset_reg = -1 - low_expand;
       end
-      5'd9: begin
-        mantissa = tempfix[4] ? tempfix[8:5] + 1 : tempfix[8:5];
-        exponent = 6;
+      4'd2: begin
+        mantissa_reg  = {expand_mantissa[1:0], 2'b0};
+        expOffset_reg = -2 - low_expand;
       end
-      5'd8: begin
-        mantissa = tempfix[3] ? tempfix[7:4] + 1 : tempfix[7:4];
-        exponent = 5;
+      4'd1: begin
+        mantissa_reg  = {expand_mantissa[0], 3'b0};
+        expOffset_reg = -3 - low_expand;
       end
-      5'd7: begin
-        mantissa = tempfix[2] ? tempfix[6:3] + 1 : tempfix[6:3];
-        exponent = 4;
-      end
-      5'd6: begin
-        mantissa = tempfix[1] ? tempfix[5:2] + 1 : tempfix[5:2];
-        exponent = 3;
-      end
-      5'd5: begin
-        mantissa = tempfix[0] ? tempfix[4:1] + 1 : tempfix[4:1];
-        exponent = 2;
-      end
-      5'd4: begin
-        mantissa = tempfix[3:0];
-        exponent = 2;
+      4'd0: begin
+        mantissa_reg  = {4'b0};
+        expOffset_reg = -4 - low_expand;
       end
       default: begin
-        mantissa = 5'b0;
-        exponent = 0;
+        mantissa_reg  = 0;
+        expOffset_reg = 4'b0;
       end
     endcase
   end
-  assign sfpout[sigWidth-1:0]           = mantissa[4] ? 4'b0 : mantissa[3:0];
-  assign sfpout[formatWidth-2:sigWidth] = mantissa[4] ? exponent + 1 : exponent;
-  assign sfpout[formatWidth-1]          = fixin[fixWidth-1];
+  assign expand_exp = expOffset_reg + max_exp;
+  assign sfpout[sigWidth-1:0] = mantissa_reg;
+  assign sfpout[formatWidth-2:sigWidth] = expOffset_reg[expWidth-1] ? (expand_exp[expWidth] ? expand_exp[expWidth-1:0] : {sigWidth{1'b0}} ) : (expand_exp[expWidth] ? {expWidth{1'b1}}:expand_exp[expWidth-1:0]);
+  assign sfpout[formatWidth-1] = zero ? 1'b0 : fixin[sigWidth+3+expWidth];
 
 endmodule

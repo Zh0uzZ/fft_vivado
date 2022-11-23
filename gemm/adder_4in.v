@@ -16,36 +16,12 @@ module adder_4in #(
   reg  [             expWidth-1:0] expOffset_reg;
 
 
-  // adder_bits #(
-  //     .sigWidth  (sigWidth),
-  //     .low_expand(low_expand)
-  // ) u1_adder (
-  //     .a  (manOffset[(sigWidth+4+low_expand)-1:0]),
-  //     .b  (manOffset[(2*(sigWidth+4+low_expand)-1):(sigWidth+4+low_expand)]),
-  //     .sum(manTemp[0])
-  // );
-  // adder_bits #(
-  //     .sigWidth  (sigWidth),
-  //     .low_expand(low_expand)
-  // ) u2_adder (
-  //     .a  (manOffset[(3*(sigWidth+4+low_expand)-1):(2*(sigWidth+4+low_expand))]),
-  //     .b  (manOffset[(4*(sigWidth+4+low_expand)-1):(3*(sigWidth+4+low_expand))]),
-  //     .sum(manTemp[1])
-  // );
-  // adder_bits #(
-  //     .sigWidth  (sigWidth),
-  //     .low_expand(low_expand)
-  // ) u3_adder (
-  //     .a  (manTemp[0]),
-  //     .b  (manTemp[1]),
-  //     .sum(manTemp[2])
-  // );
   assign manTemp =  manOffset[sigWidth+low_expand+3:0] 
                   + manOffset[2*(sigWidth+4+low_expand)-1:sigWidth+4+low_expand] 
                   + manOffset[3*(sigWidth+low_expand+4)-1:2*(sigWidth+low_expand+4)] 
                   + manOffset[4*(sigWidth+4+low_expand)-1:3*(sigWidth+4+low_expand)];
 
-  assign expand_mantissa = manTemp[(sigWidth+4+low_expand)-1] ? {1'b1 , (~manTemp[(sigWidth+4+low_expand)-2:0] + 1 ) } : manTemp;
+  assign expand_mantissa = manTemp[(sigWidth+4+low_expand)-1] ? {1'b1 , ~manTemp[(sigWidth+4+low_expand)-2:0] +1  } : manTemp;
 
   find_one #(
       .sigWidth  (sigWidth),

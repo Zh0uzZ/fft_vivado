@@ -96,7 +96,7 @@ module gemm #(
       for (i = 0; i < 8; i = i + 1) begin
         mantissa_reg[i] <= {(4) {1'b0}};
       end
- output_real <= 36'b0;
+      output_real <= 36'b0;
       output_imag <= 36'b0;
       sign_reg <= 8'b0;
 

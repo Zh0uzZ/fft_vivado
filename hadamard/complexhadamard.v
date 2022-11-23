@@ -2,7 +2,7 @@ module complexhadamard #(
     parameter expWidth    = 4,
     parameter sigWidth    = 4,
     parameter formatWidth = 9,
-    parameter fixWidth    = 21
+    parameter low_expand  = 2
 ) (
     input                          clk,
     input                          rst,
@@ -16,48 +16,49 @@ module complexhadamard #(
     output reg                     hadamard_done
 );
   localparam IDLE = 3'b000;
-  localparam MULTI = 3'b001;
-  localparam SFP2FIX = 3'b010;
-  localparam ADDER = 3'b011;
-  localparam FIX2SFP = 3'b100;
-  localparam DONE = 3'b101;
+  localparam SFP_MULTIPLY = 3'b001;
+  localparam EXP_NORMALIZER = 3'b010;
+  localparam MANTISSA_OFF = 3'b011;
+  localparam ADDER = 3'b100;
+  localparam FIX2SFP = 3'b101;
+  localparam DONE = 3'b110;
 
 
-  reg  [            3:0] i;
-  reg  [            2:0] current_state;
-  reg  [            2:0] next_state;
-  wire [formatWidth-1:0] sfp_real       [7:0];
-  wire [formatWidth-1:0] sfp_imag       [7:0];
-  reg  [formatWidth-1:0] sfp_real_reg   [7:0];
-  reg  [formatWidth-1:0] sfp_imag_reg   [7:0];
-  wire [   fixWidth-1:0] fix_real       [7:0];
-  wire [   fixWidth-1:0] fix_imag       [7:0];
-  reg  [   fixWidth-1:0] fix_real_reg   [7:0];
-  reg  [   fixWidth-1:0] fix_imag_reg   [7:0];
-  wire [         48-1:0] adder_real     [1:0];
-  wire [         48-1:0] adder_imag     [1:0];
-  reg  [   fixWidth-1:0] adder_real_reg [3:0];
-  reg  [   fixWidth-1:0] adder_imag_reg [3:0];
-  wire [formatWidth-1:0] output_sfp_real[3:0];
-  wire [formatWidth-1:0] output_sfp_imag[3:0];
+
+  genvar j;
+  reg  [                          3:0] i;
+  reg  [                          2:0] current_state;
+  reg  [                          2:0] next_state;
+  wire [              formatWidth-1:0] sfp_real          [7:0];
+  wire [              formatWidth-1:0] sfp_imag          [7:0];
+  reg  [              formatWidth-1:0] sfp_real_reg      [7:0];
+  reg  [              formatWidth-1:0] sfp_imag_reg      [7:0];
+  wire [                 expWidth-1:0] max_exp           [7:0];
+  wire [               expWidth*2-1:0] exp_offset_num    [7:0];
+  reg  [               expWidth*2-1:0] exp_offset_num_reg[7:0];
+  wire [(sigWidth+4+low_expand)*2-1:0] man_off           [7:0];
+  reg  [(sigWidth+4+low_expand)*2-1:0] man_off_reg       [7:0];
+  wire [    sigWidth+3+low_expand : 0] adder_num         [7:0];
+  reg  [    sigWidth+3+low_expand : 0] adder_num_reg     [7:0];
+  wire [              formatWidth-1:0] sfpout            [7:0];
 
 
 
 
   //debug signals 
-  wire [              formatWidth-1:0] wire_input_real     [3:0];
-  wire [              formatWidth-1:0] wire_input_imag     [3:0];
-  wire [              formatWidth-1:0] wire_output_real    [3:0];
-  wire [              formatWidth-1:0] wire_output_imag    [3:0];
-  wire [              formatWidth-1:0] wire_twiddle_real   [3:0];
-  wire [              formatWidth-1:0] wire_twiddle_imag   [3:0];
+  wire [              formatWidth-1:0] wire_input_real   [3:0];
+  wire [              formatWidth-1:0] wire_input_imag   [3:0];
+  wire [              formatWidth-1:0] wire_output_real  [3:0];
+  wire [              formatWidth-1:0] wire_output_imag  [3:0];
+  wire [              formatWidth-1:0] wire_twiddle_real [3:0];
+  wire [              formatWidth-1:0] wire_twiddle_imag [3:0];
   genvar k;
   generate
     for (k = 0; k < 4; k = k + 1) begin
-      assign wire_input_real[k]  = input_real[formatWidth*(k+1)-1:formatWidth*k];
-      assign wire_input_imag[k]  = input_imag[formatWidth*(k+1)-1:formatWidth*k];
-      assign wire_output_real[k] = output_real[formatWidth*(k+1)-1:formatWidth*k];
-      assign wire_output_imag[k] = output_imag[formatWidth*(k+1)-1:formatWidth*k];
+      assign wire_input_real[k]   = input_real[formatWidth*(k+1)-1:formatWidth*k];
+      assign wire_input_imag[k]   = input_imag[formatWidth*(k+1)-1:formatWidth*k];
+      assign wire_output_real[k]  = output_real[formatWidth*(k+1)-1:formatWidth*k];
+      assign wire_output_imag[k]  = output_imag[formatWidth*(k+1)-1:formatWidth*k];
       assign wire_twiddle_real[k] = twiddle_real[formatWidth*(k+1)-1:formatWidth*k];
       assign wire_twiddle_imag[k] = twiddle_imag[formatWidth*(k+1)-1:formatWidth*k];
     end
@@ -73,58 +74,57 @@ module complexhadamard #(
       for (i = 0; i < 7; i = i + 1) begin
         sfp_real_reg[i] <= {(formatWidth) {1'b0}};
         sfp_imag_reg[i] <= {(formatWidth) {1'b0}};
-        fix_real_reg[i] <= {(fixWidth) {1'b0}};
-        fix_imag_reg[i] <= {(fixWidth) {1'b0}};
-      end
-
-      for (i = 0; i < 4; i = i + 1) begin
-        adder_real_reg[i] <= {(fixWidth) {1'b0}};
-        adder_imag_reg[i] <= {(fixWidth) {1'b0}};
+        exp_offset_num_reg[i] <= {(2*expWidth){1'b0}};
+        man_off_reg[i]<= {(sigWidth+4+low_expand)*2{1'b0}};
+        adder_num_reg[i] <= {(sigWidth+4+low_expand){1'b0}};
       end
 
     end else begin
       current_state <= next_state;
     end
   end
+
   always @(*) begin
     case (current_state)
       IDLE: begin
         if (start) begin
-          next_state = MULTI;
+          next_state = SFP_MULTIPLY;
         end else begin
           next_state = IDLE;
         end
         hadamard_done = 0;
       end
-      MULTI: begin
-        for ( i = 0; i < 8; i = i + 1) begin
+      SFP_MULTIPLY: begin
+        for (i = 0; i < 8; i = i + 1) begin
           sfp_real_reg[i] = sfp_real[i];
           sfp_imag_reg[i] = sfp_imag[i];
         end
-        next_state = SFP2FIX;
+        next_state = EXP_NORMALIZER;
       end
-      SFP2FIX: begin
-        for ( i = 0; i < 8; i = i + 1) begin
-          fix_real_reg[i] = fix_real[i];
-          fix_imag_reg[i] = fix_imag[i];
+      EXP_NORMALIZER: begin
+        for (i = 0; i < 8; i = i + 1) begin
+          exp_offset_num_reg[i] = exp_offset_num[i];
+        end
+        next_state = MANTISSA_OFF;
+      end
+      MANTISSA_OFF: begin
+        for (i = 0; i < 8; i = i + 1) begin
+          man_off_reg[i] = man_off[i];
         end
         next_state = ADDER;
       end
       ADDER: begin
-        for ( i = 0; i < 2; i = i + 1) begin
-          adder_real_reg[i]   = adder_real[i][44:24];
-          adder_real_reg[i+2] = adder_real[i][20:0];
-          adder_imag_reg[i]   = adder_imag[i][44:24];
-          adder_imag_reg[i+2] = adder_imag[i][20:0];
+        for (i = 0; i < 8; i = i + 1) begin
+          adder_num_reg[i] = adder_num[i];
         end
         next_state = FIX2SFP;
       end
-      FIX2SFP: begin
+      FIX2SFP : begin
         output_real = {
-          output_sfp_real[3], output_sfp_real[2], output_sfp_real[1], output_sfp_real[0]
+          sfpout[3], sfpout[2], sfpout[1], sfpout[0]
         };
         output_imag = {
-          output_sfp_imag[3], output_sfp_imag[2], output_sfp_imag[1], output_sfp_imag[0]
+          sfpout[7], sfpout[6], sfpout[5], sfpout[4]
         };
         hadamard_done = 1;
         next_state = IDLE;
@@ -133,9 +133,9 @@ module complexhadamard #(
     endcase
   end
 
-  genvar j;
 
-  //sfp相乘
+
+  //sfp相乘，输入与twiddle factor相乘
   generate
     for (j = 0; j < 4; j = j + 1) begin : u_sfpmulti0
       sfpmulti #(
@@ -143,9 +143,9 @@ module complexhadamard #(
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
       ) u0_sfpmulti (
-          .a   (input_real[(j+1)*formatWidth-1 : j*formatWidth]),
-          .b   (twiddle_real[(j+1)*formatWidth-1 : j*formatWidth]),
-          .c   (sfp_real[j])
+          .a(input_real[(j+1)*formatWidth-1 : j*formatWidth]),
+          .b(twiddle_real[(j+1)*formatWidth-1 : j*formatWidth]),
+          .c(sfp_real[j])
       );
     end
   endgenerate
@@ -156,9 +156,9 @@ module complexhadamard #(
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
       ) u1_sfpmulti (
-          .a   (input_real[(j+1)*formatWidth-1 : j*formatWidth]),
-          .b   (twiddle_imag[(j+1)*formatWidth-1 : j*formatWidth]),
-          .c   (sfp_imag[j])
+          .a(input_real[(j+1)*formatWidth-1 : j*formatWidth]),
+          .b(twiddle_imag[(j+1)*formatWidth-1 : j*formatWidth]),
+          .c(sfp_imag[j])
       );
     end
   endgenerate
@@ -169,9 +169,9 @@ module complexhadamard #(
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
       ) u2_sfpmulti (
-          .a   (input_imag[(j+1)*formatWidth-1 : j*formatWidth]),
-          .b   (twiddle_real[(j+1)*formatWidth-1 : j*formatWidth]),
-          .c   (sfp_imag[j+4])
+          .a(input_imag[(j+1)*formatWidth-1 : j*formatWidth]),
+          .b(twiddle_real[(j+1)*formatWidth-1 : j*formatWidth]),
+          .c(sfp_imag[j+4])
       );
     end
   endgenerate
@@ -182,110 +182,103 @@ module complexhadamard #(
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
       ) u3_sfpmulti (
-          .a   (input_imag[(j+1)*formatWidth-1 : j*formatWidth]),
-          .b   (twiddle_imag[(j+1)*formatWidth-1 : j*formatWidth]),
-          .c   (sfp_real[j+4])
+          .a(input_imag[(j+1)*formatWidth-1 : j*formatWidth]),
+          .b(twiddle_imag[(j+1)*formatWidth-1 : j*formatWidth]),
+          .c(sfp_real[j+4])
       );
     end
   endgenerate
 
-  //sfp2fix，将sfp转化为定点数 21bit
+
+  // 指数找到最大值以及算出偏移量
   generate
-    for (j = 0; j < 8; j = j + 1) begin : u_sfp2fix0
-      sfp2fix #(
-          .expWidth   (expWidth),
-          .sigWidth   (sigWidth),
-          .formatWidth(formatWidth),
-          .fixWidth   (fixWidth)
-      ) u0_sfp2fix (
-          .sfpin (sfp_imag_reg[j]),
-          .fixout(fix_imag[j])
-      );
-    end
-  endgenerate
-  generate
-    for (j = 0; j < 4; j = j + 1) begin : u_sfp2fix1
-      sfp2fix #(
-          .expWidth   (expWidth),
-          .sigWidth   (sigWidth),
-          .formatWidth(formatWidth),
-          .fixWidth   (fixWidth)
-      ) u1_sfp2fix (
-          .sfpin (sfp_real_reg[j]),
-          .fixout(fix_real[j])
-      );
-    end
-  endgenerate
-  generate
-    for (j = 4; j < 8; j = j + 1) begin : u_sfp2fix2
-      sfp2fix #(
-          .expWidth   (expWidth),
-          .sigWidth   (sigWidth),
-          .formatWidth(formatWidth),
-          .fixWidth   (fixWidth)
-      ) u2_sfp2fix (
-          .sfpin ({~sfp_real_reg[j][formatWidth-1], sfp_real_reg[j][formatWidth-2:0]}),
-          .fixout(fix_real[j])
+    for (j = 0; j < 4; j = j + 1) begin : u_exp0
+      exp_normalizer_2 #(
+          .expWidth(expWidth)
+      ) u0_exp_normalizer (
+          .input_exp({
+            sfp_real_reg[i][formatWidth-2:sigWidth], sfp_real_reg[i+4][formatWidth-2:sigWidth]
+          }),
+          .max_exp(max_exp[j]),
+          .exp_offset_num(exp_offset_num[j])
       );
     end
   endgenerate
 
-  //定点数相加 21 + 21 = 21
   generate
-    for (j = 0; j < 2; j = j + 1) begin : u_adder0
-      // add_21 u0_adder (
-      //   // .CLK(clk),
-      //   .A  (fix_real_reg[j]),
-      //   .D  (fix_real_reg[j+4]),
-      //   .P  (adder_real[j])
-      // );
-      ADD_2IN u0_ADD (
-          .CONCAT({3'b0, fix_real_reg[j], 3'b0, fix_real_reg[j+2]}),
-          .C({3'b0, fix_real_reg[j+4], 3'b0, fix_real_reg[j+6]}),
-          .P(adder_real[j])
+    for (j = 4; j < 8; j = j + 1) begin : u_exp1
+      exp_normalizer_2 #(
+          .expWidth(expWidth)
+      ) u1_exp_normalizer (
+          .input_exp({
+            sfp_imag_reg[j][formatWidth-2:sigWidth], sfp_imag_reg[j+4][formatWidth-2:sigWidth]
+          }),
+          .max_exp(max_exp[j]),
+          .exp_offset_num(exp_offset_num[j])
       );
-    end
-  endgenerate
-  generate
-    for (j = 0; j < 2; j = j + 1) begin : u_adder1
-      ADD_2IN u1_ADD (
-          .CONCAT({3'b0, fix_imag_reg[j], 3'b0, fix_imag_reg[j+2]}),
-          .C     ({3'b0, fix_imag_reg[j+4], 3'b0, fix_imag_reg[j+6]}),
-          .P     (adder_imag[j])
-      );
-      // add_21 u1_adder (
-      //     // .CLK(clk),
-      //     .A(fix_imag_reg[j]),
-      //     .D(fix_imag_reg[j+4]),
-      //     .P(adder_imag[j])
-      // );
     end
   endgenerate
 
-  //fix2sfp ,定点数转换为sfp
+
+  //指数部分右移
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u_fix2sfp_real
+    for (j = 0; j < 4; j = j + 1) begin : u0_man
+      man_shifter_2 #(
+          .expWidth  (expWidth),
+          .sigWidth  (sigWidth),
+          .low_expand(low_expand)
+      ) u_man_shifter (
+          .exp_offset_num(exp_offset_num_reg[j]),
+          .mantissa({sfp_real_reg[sigWidth-1:0], sfp_real_reg[sigWidth-1:0]}),
+          .sign({sfp_real_reg[formatWidth-1], 1 ^ sfp_real_reg[formatWidth-1]}),
+          .man_off(man_off[j])
+      );
+    end
+  endgenerate
+
+  generate
+    for (j = 0; j < 4; j = j + 1) begin : u1_man
+      man_shifter_2 #(
+          .expWidth  (expWidth),
+          .sigWidth  (sigWidth),
+          .low_expand(low_expand)
+      ) u_man_shifter (
+          .exp_offset_num(exp_offset_num_reg[j]),
+          .mantissa({sfp_imag_reg[sigWidth-1:0], sfp_imag_reg[sigWidth-1:0]}),
+          .sign({sfp_imag_reg[formatWidth-1], sfp_imag_reg[formatWidth-1]}),
+          .man_off(man_off[j+4])
+      );
+    end
+  endgenerate
+
+
+  //求补码并且10bit数据相加
+  generate
+    for (j = 0; j < 8; j = j + 1) begin : u_adder_2in
+      adder_2in #(
+          .sigWidth  (sigWidth),
+          .low_expand(low_expand)
+      ) u_adder_2in (
+          .input_num(man_off_reg[j]),
+          .adder_num(adder_num[j])
+      );
+    end
+  endgenerate
+
+
+  //对得到的10bit定点数，求补码并且转换为sfp数
+
+  generate
+    for (j = 0; j < 8; j = j + 1) begin : u_fix2sfp
       fix2sfp #(
-          .expWidth   (expWidth),
-          .sigWidth   (sigWidth),
+          .expWidth(expWidth),
+          .sigWidth(sigWidth),
           .formatWidth(formatWidth),
-          .fixWidth   (fixWidth)
-      ) u0_fix2sfp (
-          .fixin (adder_real_reg[j]),
-          .sfpout(output_sfp_real[j])
-      );
-    end
-  endgenerate
-  generate
-    for (j = 0; j < 4; j = j + 1) begin : u_fix2sfp_imag
-      fix2sfp #(
-          .expWidth   (expWidth),
-          .sigWidth   (sigWidth),
-          .formatWidth(formatWidth),
-          .fixWidth   (fixWidth)
-      ) u1_fix2sfp (
-          .fixin (adder_imag_reg[j]),
-          .sfpout(output_sfp_imag[j])
+          .low_expand(low_expand)
+      ) u_fix2sfp (
+          .fixin  (adder_num_reg[j]),
+          .max_exp(max_exp[j]),
+          .sfpout (sfpout[j])
       );
     end
   endgenerate

@@ -8,7 +8,7 @@ module exp_offset #(
   genvar i;
   generate
     for (i = 0; i < 4; i = i + 1) begin : u_exp_offset
-      assign exp_offset_num[expWidth*i+expWidth-1 : expWidth*i] = (input_exp == 4'b0000) ? 9 : max_exp - input_exp[expWidth*i+expWidth-1 : expWidth*i];
+      assign exp_offset_num[expWidth*i+expWidth-1 : expWidth*i] = (input_exp[expWidth*(i+1)-1:expWidth*i] == 4'b0000) ? 9 : max_exp - input_exp[expWidth*i+expWidth-1 : expWidth*i];
     end
   endgenerate
 endmodule

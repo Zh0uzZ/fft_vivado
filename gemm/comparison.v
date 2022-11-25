@@ -1,5 +1,5 @@
 module comparison #(
-  parameter expWidth = 3
+  parameter expWidth = 4
 ) (
   input  [(expWidth-1):0] a,
   input  [(expWidth-1):0] b,

@@ -31,8 +31,8 @@ module complexhadamard #(
   reg  [                          2:0] next_state;
   wire [              formatWidth-1:0] sfp_real          [7:0];
   wire [              formatWidth-1:0] sfp_imag          [7:0];
-  reg  [              formatWidth-1:0] sfp_real_reg      [7:0];
-  reg  [              formatWidth-1:0] sfp_imag_reg      [7:0];
+  reg  [            formatWidth*8-1:0] sfp_real_reg;
+  reg  [            formatWidth*8-1:0] sfp_imag_reg;
   wire [                 expWidth-1:0] max_exp           [7:0];
   wire [               expWidth*2-1:0] exp_offset_num    [7:0];
   reg  [               expWidth*2-1:0] exp_offset_num_reg[7:0];
@@ -71,12 +71,14 @@ module complexhadamard #(
   always @(posedge clk or negedge rst) begin
     if (~rst) begin
       current_state <= 0;
-      for (i = 0; i < 7; i = i + 1) begin
-        sfp_real_reg[i] <= {(formatWidth) {1'b0}};
-        sfp_imag_reg[i] <= {(formatWidth) {1'b0}};
-        exp_offset_num_reg[i] <= {(2*expWidth){1'b0}};
-        man_off_reg[i]<= {(sigWidth+4+low_expand)*2{1'b0}};
-        adder_num_reg[i] <= {(sigWidth+4+low_expand){1'b0}};
+      sfp_real_reg  <= 0;
+      sfp_imag_reg  <= 0;
+      output_real   <= 0;
+      output_imag   <= 0;
+      for (i = 0; i < 8; i = i + 1) begin
+        exp_offset_num_reg[i] <= {(2 * expWidth) {1'b0}};
+        man_off_reg[i]        <= {((sigWidth + 4 + low_expand) * 2) {1'b0}};
+        adder_num_reg[i]      <= {(sigWidth + 4 + low_expand) {1'b0}};
       end
 
     end else begin
@@ -95,10 +97,26 @@ module complexhadamard #(
         hadamard_done = 0;
       end
       SFP_MULTIPLY: begin
-        for (i = 0; i < 8; i = i + 1) begin
-          sfp_real_reg[i] = sfp_real[i];
-          sfp_imag_reg[i] = sfp_imag[i];
-        end
+        sfp_real_reg = {
+          sfp_real[7],
+          sfp_real[6],
+          sfp_real[5],
+          sfp_real[4],
+          sfp_real[3],
+          sfp_real[2],
+          sfp_real[1],
+          sfp_real[0]
+        };
+        sfp_imag_reg = {
+          sfp_imag[7],
+          sfp_imag[6],
+          sfp_imag[5],
+          sfp_imag[4],
+          sfp_imag[3],
+          sfp_imag[2],
+          sfp_imag[1],
+          sfp_imag[0]
+        };
         next_state = EXP_NORMALIZER;
       end
       EXP_NORMALIZER: begin
@@ -119,13 +137,9 @@ module complexhadamard #(
         end
         next_state = FIX2SFP;
       end
-      FIX2SFP : begin
-        output_real = {
-          sfpout[3], sfpout[2], sfpout[1], sfpout[0]
-        };
-        output_imag = {
-          sfpout[7], sfpout[6], sfpout[5], sfpout[4]
-        };
+      FIX2SFP: begin
+        output_real = {sfpout[3], sfpout[2], sfpout[1], sfpout[0]};
+        output_imag = {sfpout[7], sfpout[6], sfpout[5], sfpout[4]};
         hadamard_done = 1;
         next_state = IDLE;
       end
@@ -137,12 +151,12 @@ module complexhadamard #(
 
   //sfp相乘，输入与twiddle factor相乘
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u_sfpmulti0
+    for (j = 0; j < 4; j = j + 1) begin : u0_sfpmulti
       sfpmulti #(
           .expWidth   (expWidth),
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
-      ) u0_sfpmulti (
+      ) u_sfpmulti (
           .a(input_real[(j+1)*formatWidth-1 : j*formatWidth]),
           .b(twiddle_real[(j+1)*formatWidth-1 : j*formatWidth]),
           .c(sfp_real[j])
@@ -150,12 +164,12 @@ module complexhadamard #(
     end
   endgenerate
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u_sfpmulti1
+    for (j = 0; j < 4; j = j + 1) begin : u1_sfpmulti
       sfpmulti #(
           .expWidth   (expWidth),
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
-      ) u1_sfpmulti (
+      ) u_sfpmulti (
           .a(input_real[(j+1)*formatWidth-1 : j*formatWidth]),
           .b(twiddle_imag[(j+1)*formatWidth-1 : j*formatWidth]),
           .c(sfp_imag[j])
@@ -163,12 +177,12 @@ module complexhadamard #(
     end
   endgenerate
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u_sfpmulti2
+    for (j = 0; j < 4; j = j + 1) begin : u2_sfpmulti
       sfpmulti #(
           .expWidth   (expWidth),
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
-      ) u2_sfpmulti (
+      ) u_sfpmulti (
           .a(input_imag[(j+1)*formatWidth-1 : j*formatWidth]),
           .b(twiddle_real[(j+1)*formatWidth-1 : j*formatWidth]),
           .c(sfp_imag[j+4])
@@ -176,12 +190,12 @@ module complexhadamard #(
     end
   endgenerate
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u_sfpmulti3
+    for (j = 0; j < 4; j = j + 1) begin : u3_sfpmulti
       sfpmulti #(
           .expWidth   (expWidth),
           .sigWidth   (sigWidth),
           .formatWidth(formatWidth)
-      ) u3_sfpmulti (
+      ) u_sfpmulti (
           .a(input_imag[(j+1)*formatWidth-1 : j*formatWidth]),
           .b(twiddle_imag[(j+1)*formatWidth-1 : j*formatWidth]),
           .c(sfp_real[j+4])
@@ -192,12 +206,13 @@ module complexhadamard #(
 
   // 指数找到最大值以及算出偏移量
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u_exp0
+    for (j = 0; j < 4; j = j + 1) begin : u0_exp_normalizer
       exp_normalizer_2 #(
           .expWidth(expWidth)
-      ) u0_exp_normalizer (
+      ) u_exp_normalizer (
           .input_exp({
-            sfp_real_reg[i][formatWidth-2:sigWidth], sfp_real_reg[i+4][formatWidth-2:sigWidth]
+            sfp_real_reg[formatWidth*(j+1)-2-:expWidth], 
+            sfp_real_reg[formatWidth*(j+5)-2-:expWidth]
           }),
           .max_exp(max_exp[j]),
           .exp_offset_num(exp_offset_num[j])
@@ -206,15 +221,16 @@ module complexhadamard #(
   endgenerate
 
   generate
-    for (j = 4; j < 8; j = j + 1) begin : u_exp1
+    for (j = 0; j < 4; j = j + 1) begin : u1_exp_normalizer
       exp_normalizer_2 #(
           .expWidth(expWidth)
-      ) u1_exp_normalizer (
+      ) u_exp_normalizer (
           .input_exp({
-            sfp_imag_reg[j][formatWidth-2:sigWidth], sfp_imag_reg[j+4][formatWidth-2:sigWidth]
+            sfp_imag_reg[formatWidth*(j+1)-2-:expWidth], 
+            sfp_imag_reg[formatWidth*(j+5)-2-:expWidth]
           }),
-          .max_exp(max_exp[j]),
-          .exp_offset_num(exp_offset_num[j])
+          .max_exp(max_exp[j+4]),
+          .exp_offset_num(exp_offset_num[j+4])
       );
     end
   endgenerate
@@ -222,30 +238,36 @@ module complexhadamard #(
 
   //指数部分右移
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u0_man
+    for (j = 0; j < 4; j = j + 1) begin : u0_man_shifter
       man_shifter_2 #(
           .expWidth  (expWidth),
           .sigWidth  (sigWidth),
           .low_expand(low_expand)
       ) u_man_shifter (
           .exp_offset_num(exp_offset_num_reg[j]),
-          .mantissa({sfp_real_reg[sigWidth-1:0], sfp_real_reg[sigWidth-1:0]}),
-          .sign({sfp_real_reg[formatWidth-1], 1 ^ sfp_real_reg[formatWidth-1]}),
+          .mantissa({
+            sfp_real_reg[formatWidth*(j+1)-2-expWidth-:sigWidth],
+            sfp_real_reg[formatWidth*(j+5)-2-expWidth-:sigWidth]
+          }),
+          .sign({sfp_real_reg[formatWidth*(j+1)-1], 1'b1 ^ sfp_real_reg[formatWidth*(j+5)-1]}),
           .man_off(man_off[j])
       );
     end
   endgenerate
 
   generate
-    for (j = 0; j < 4; j = j + 1) begin : u1_man
+    for (j = 0; j < 4; j = j + 1) begin : u1_man_shifter
       man_shifter_2 #(
           .expWidth  (expWidth),
           .sigWidth  (sigWidth),
           .low_expand(low_expand)
       ) u_man_shifter (
-          .exp_offset_num(exp_offset_num_reg[j]),
-          .mantissa({sfp_imag_reg[sigWidth-1:0], sfp_imag_reg[sigWidth-1:0]}),
-          .sign({sfp_imag_reg[formatWidth-1], sfp_imag_reg[formatWidth-1]}),
+          .exp_offset_num(exp_offset_num_reg[j+4]),
+          .mantissa({
+            sfp_imag_reg[formatWidth*(j+1)-2-expWidth-:sigWidth],
+            sfp_imag_reg[formatWidth*(j+5)-2-expWidth-:sigWidth]
+          }),
+          .sign({sfp_imag_reg[formatWidth*(j+1)-1], sfp_imag_reg[formatWidth*(j+5)-1]}),
           .man_off(man_off[j+4])
       );
     end

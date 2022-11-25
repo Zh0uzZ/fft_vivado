@@ -1,5 +1,5 @@
 module exp_normalizer #(
-  parameter expWidth = 3
+  parameter expWidth = 4
 ) (
   input  [(expWidth*4-1):0] input_exp,
   output [(expWidth - 1):0] max_exp,

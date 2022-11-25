@@ -16,10 +16,10 @@ module sfpmulti #(
 
   assign out_multi = {1'b1, a[sigWidth-1:0]} * {1'b1, b[sigWidth-1:0]};
   assign mantissa[sigWidth-1:0] = (expExpand>8) ? (out_multi[2*sigWidth+1] ? 
-                            (out_multi[sigWidth] ? (out_multi[sigWidth*2:sigWidth+1]+1) : (out_multi[sigWidth*2:sigWidth+1])) : 
-                            (out_multi[sigWidth-1] ? (out_multi[sigWidth*2-1:sigWidth]+1) :(out_multi[sigWidth*2-1:sigWidth])))
+                            (out_multi[sigWidth*2:sigWidth+1]) : 
+                            ((out_multi[sigWidth*2-1:sigWidth])))
                             :{(sigWidth){1'b0}};
   assign expExpand = a[formatWidth-2:sigWidth] + b[formatWidth-2:sigWidth] + out_multi[2*(sigWidth+1)-1];
   assign exponent = (expExpand > 8) ? {expExpand + 5'b11000} : {5'b0};
-  assign c = (b[formatWidth-2:sigWidth] == 4'b0000) ? ({formatWidth{1'b0}}) : {a[formatWidth-1] ^ b[formatWidth-1], exponent[expWidth-1:0], mantissa};
+  assign c = ((a[formatWidth-2:sigWidth] == 4'b0000)|(b[formatWidth-2:sigWidth] == 4'b0000)) ? ({formatWidth{1'b0}}) : {a[formatWidth-1] ^ b[formatWidth-1], exponent[expWidth-1:0], mantissa};
 endmodule

@@ -13,7 +13,6 @@ module fix2sfp #(
   wire                           zero;
   wire [                    3:0] pos;
   wire [sigWidth+2+low_expand:0] expand_mantissa;
-  reg  [             sigWidth:0] mantissa;
   reg  [           sigWidth-1:0] mantissa_reg;
   reg  [           expWidth-1:0] expOffset_reg;
   wire [             expWidth:0] expand_exp;
@@ -168,6 +167,6 @@ module fix2sfp #(
   assign expand_exp = expOffset_reg + max_exp;
   assign sfpout[sigWidth-1:0] = mantissa_reg;
   assign sfpout[formatWidth-2:sigWidth] = expOffset_reg[expWidth-1] ? (expand_exp[expWidth] ? expand_exp[expWidth-1:0] : {sigWidth{1'b0}} ) : (expand_exp[expWidth] ? {expWidth{1'b1}}:expand_exp[expWidth-1:0]);
-  assign sfpout[formatWidth-1] = zero ? 1'b0 : fixin[sigWidth+3+expWidth];
+  assign sfpout[formatWidth-1] = zero ? 1'b0 : fixin[sigWidth+3+low_expand];
 
 endmodule

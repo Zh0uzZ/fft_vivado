@@ -1,5 +1,5 @@
 module exp_comparison #(
-  parameter expWidth = 3
+  parameter expWidth = 4
 ) (
   input  [expWidth*4-1:0] input_exp,
   output [(expWidth-1):0] output_com
@@ -24,7 +24,7 @@ module exp_comparison #(
     for (i = 0; i < 1; i = i + 1) begin : compare1
       comparison #(
         .expWidth(expWidth)
-      ) u_comp1 (
+      ) u_comp (
         .a(exp_temp[i]),
         .b(exp_temp[i+1]),
         .c(output_com)
